@@ -6,8 +6,57 @@ Description:
 import matplotlib.pyplot as plt
 import numpy as np
 
-import draw, elements
+import draw
 
+### CONSTANTS ###
+
+# Speed of light in a vacuum [m/s]
+c = 2.99792458 * 10**8
+
+### FUNCTIONS ###
+def index_of_refraction(u):
+    """
+    Calculates the index of refraction from the speed of light in a medium
+
+    u:  Speed of light in a medium
+    """
+    return c/u
+
+def speed_of_light_in_medium(n):
+    """
+    Calculates the speed of light in a medium from the index of refraction
+
+    n:  Index of refraction
+    """
+    return c/n
+
+def wavelength(u, v):
+    """
+    Calculates the wavelenth of light from the speed and frequency
+
+    u:  Speed of light in a medium (set to c if in vacuum)
+    v:  Frequency 
+    """
+    return u/v
+
+def frequency(u, w):
+    """
+    Calculates the frequency of light from the speed and wavelength
+
+    u:  Speed of light in a medium (set to c if in vacuum)
+    w: Wavelength
+    """
+    return u/w 
+
+def wavenumber(w):
+    """
+    Calculates the wavenumber (number of wavelengths per cm)
+
+    w: Wavelength [cm]
+    """
+    return 1/w
+
+### CLASSES ###
 class System:
     """
     Holds a paraxial optical system
@@ -114,6 +163,18 @@ class Thickness:
     Holds a thickness
     """
 
+    def __init__(self, t, n):
+        """
+        Initializes a thickness
+
+        t:  Thickness
+        n:  Index of refraction
+        """
+
+        self.t = t
+        self.n = n
+        self.OPD = t*n
+
 class ThickLens:
     """
     Holds a thick lens
@@ -140,6 +201,7 @@ class Ray:
         self.y = y
         self.w = w
         self.un = un
+
 
 
 if __name__ == "__main__":

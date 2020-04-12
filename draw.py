@@ -32,11 +32,3 @@ def draw_lens(ax, coords):
     for i in range(len(coords) - 1):
         ax.plot([coords[i][0][0], coords[i + 1][0][0]], [coords[i][0][1], coords[i + 1][0][1]], 'b', linewidth=1)
         ax.plot([coords[i][-1][0], coords[i + 1][-1][0]], [coords[i][-1][1], coords[i + 1][-1][1]], 'b', linewidth=1)
-    
-def draw_thinlens(ax, d, p):
-
-    y = np.linspace(-d/2, d/2, 1000)  
-    x = p + y*0
-
-    ax.plot(x, y, 'b', linewidth = 1)
-    ax.scatter([p, p],[y[0], y[-1]], c = 'b', marker = 'x', linewidth = 1)

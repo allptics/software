@@ -3,7 +3,6 @@ Description:
     Functions used to create paraxial systems
 """
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 import draw
@@ -84,30 +83,24 @@ class ThinLens:
 
     id = "thin"
 
-    def __init__(self, r, d, un):
+    def __init__(self, phi = None, d = None, p = 0):
         """
-        Description:
-            Defines a thin lens
+        Defines a thin lens
         
-        r:  Radius of curvature
-        d:  Diameter
-        un: Units
+        phi:    power of lens
+        d:      diameter of lens 
+        p:      position of lens on optical axis
         """
 
-        self.r = r
+        self.phi = phi
         self.d = d
-        self.un = un
-    
-    def draw(self, ax, p = 0):
-        """
-        Description:
-            Draws a spherical surface
 
-        ax: Plot to draw surface on
-        p: Position of apex along the optical axis 
-        """
-
-        draw.draw_thinlens(ax, self.d, p)
+        self.V0 = self.V1 = self.P0 = self.P1 = self.N0 = self.N1 = p
+        
+        if not phi == None:
+            self.f = 1 / self.phi
+        else:
+            self.f = None
 
 class Thickness:
     """
@@ -124,7 +117,8 @@ class Thickness:
 
         self.t = t
         self.n = n
-        self.OPD = t*n
+        self.T = t*n
+
 
 class ThickLens:
     """
@@ -159,5 +153,6 @@ if __name__ == "__main__":
     """
     Space for testing
     """
+    import matplotlib.pyplot as plt
 
     fig, ax = plt.subplots()

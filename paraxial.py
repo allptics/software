@@ -109,6 +109,16 @@ class ThinLens:
 
         draw.draw_thinlens(ax, self.d, p)
 
+class Thickness:
+    """
+    Holds a thickness
+    """
+
+class ThickLens:
+    """
+    Holds a thick lens
+    """
+
 
 class Ray:
     """
@@ -138,22 +148,3 @@ if __name__ == "__main__":
     """
 
     fig, ax = plt.subplots()
-
-    t1 = elements.Thickness(10, 1, "mm")
-    thin1 = ThinLens(100, 10, "mm")
-    t2 = elements.Thickness(10, 1.5, "mm")
-    thin2 = ThinLens(-100, 10, "mm")
-    t3 = elements.Thickness(10, 1, "mm")
-
-
-    sys = System(1, "mm")
-    sys.add_elements([
-        t1,
-        thin1,
-        t2,
-        thin2,
-        t3
-    ])
-
-    sys.draw(ax)
-    plt.show()

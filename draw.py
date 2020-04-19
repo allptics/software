@@ -6,7 +6,44 @@ Description:
 import numpy as np
 import matplotlib.pyplot as plt
 
-import elements, paraxial
+def draw_paraxial_system(ax, sys):
+    """
+    Draws a paraxial system
+
+    ax:     plot
+    sys:    system
+    """
+
+    # plot optical axis
+    ax.axhline(y=0,color="black",dashes=[5,1,5,1],linewidth=1)
+
+    # plot starting point
+    p = 0
+    ax.axvline(p, c="green", ls="--", lw=1)
+
+    # plot lenses
+    for i in sys.elements:
+        if i.id == "thickness":
+            p = p + i.t
+        else:
+            ax.axvline(p, ls=":", lw=1)
+
+    # plot rays
+    y_max = 0
+    for ray in sys.rays:
+        x = []
+        y = []
+        for pt in ray.pts:
+            x.append(pt[0])
+            y.append(pt[1])
+            if pt[1] > abs(y_max):
+                y_max = abs(pt[1])
+        ax.plot(x, y, lw=1)
+
+    # plot ending point
+    ax.axvline(p, c="red", ls="--", lw=1)
+
+    plt.ylim(-y_max*1.2, y_max*1.2)
 
 def draw_surface(ax, x, y):
     """

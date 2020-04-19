@@ -182,16 +182,18 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
 
-    t0 = Thickness(100, 1)
-    lens1 = Lens(100)
-    t1 = Thickness(50, 1)
-    lens2 = Lens(-100)
+    t0 = Thickness(50, 1)
+    lens1 = Lens(500)
+    t1 = Thickness(600, 1)
+    lens2 = Lens(100)
     t2 = Thickness(100, 1)
-    ray1 = Ray(10, 0)
+    ray1 = Ray(600, 0)
+    ray2 = Ray(-600, 0)
 
     sys = System()
     sys.add_elements([t0, lens1, t1, lens2, t2])
     sys.trace_ray(ray1)
+    sys.trace_ray(ray2)
 
     sys.draw(ax)
 

@@ -17,14 +17,19 @@ class Lens():
 
     id = "lens"
 
-    def __init__(self, f):
+    def __init__(self, f, d):
         """
         Defines a thin lens
 
         f:  focal length of lens
+        d:  diameter of lens
         """
 
         self.f = f
+        self.d = d
+        
+        # conditionals
+        self.isStop = False
 
         # power of lens
         self.phi = 1 / self.f
@@ -57,15 +62,24 @@ class System():
     id = "system"
     physics = "geometrical"
 
-    def __init__(self):
+    def __init__(self, type="focal"):
         """
         Defines a system
         """
 
+        self.type = "focal"
+
         self.elements = []
         self.rays = []
+
+        # principal planes
+        self.pp = [None, None]
+        # focal planes
+        self.fp = [None, None]
+        # vertexs
+        self.v = [None, None]
     
-    # Functions for adding elements/rays to system
+    # Functions for adding elements/rays/planes to system
 
     def add_element(self,element):
         """
@@ -160,7 +174,31 @@ class System():
         
         self.rays.append(ray)
 
+    def add_planes(self):
+        """
+        Adds planes to the system
+        """
+        self.find_vertex_points()
+        self.pp = [self.v[0] + self.find_front_principal_plane(), self.v[1] + self.find_rear_principal_plane()]
+        self.fp = [self.v[0] + self.find_front_focal_distance(), self.v[1] + self.find_back_focal_distance()]
+
     # Functions for making system calculations
+
+    def find_vertex_points(self):
+        """
+        Finds the vertex points
+        """
+        isFirst = True
+
+        p = 0
+        for element in self.elements:
+            if element.id == "thickness":
+                p = p + element.t / element.n
+            else:
+                if isFirst:
+                    self.v[0] = p
+                    isFirst = False
+                self.v[1] = p
 
     def find_vertex_matrix(self):
         """
@@ -181,6 +219,7 @@ class System():
 
         while i < max:
             element = elements[i]
+            i = i + 1  
             if element.id == "thickness":
                 # transfer array
                 transfer = np.array([
@@ -332,18 +371,18 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
 
-    t0 = Thickness(100, 1)
-    lens1 = Lens(100)
-    t1 = Thickness(100, 1)
+    t0 = Thickness(50, 1)
+    lens1 = Lens(100, 20)
+    t1 = Thickness(50, 1)
+    lens2 = Lens(75, 20)
+    t2 = Thickness(100, 1)
     ray1 = Ray(10, 0)
 
     sys = System()
-    sys.add_elements([t0, lens1, t1])
+    sys.add_elements([t0, lens1, t1, lens2, t2])
     sys.add_ray(ray1)
 
-    print(sys.find_back_focal_distance())
+    sys.add_planes()
 
-    """
     sys.draw(ax)
     plt.show()
-    """

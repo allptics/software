@@ -24,7 +24,7 @@ def draw_paraxial_system(ax, sys):
     # plot lenses
     for i in sys.elements:
         if i.id == "thickness":
-            p = p + i.t
+            p = p + i.t / i.n
         else:
             ax.axvline(p, ls=":", lw=1)
 

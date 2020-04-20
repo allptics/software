@@ -6,7 +6,55 @@ Description:
 import numpy as np
 import matplotlib.pyplot as plt
 
-# NEEDS REVIEW
+### PARAXIAL ###
+y_max = 0
+
+def draw_paraxial_object(ax, obj, p):
+    """
+    Draws a paraxial object
+
+    ax:     plot
+    obj:    paraxial object
+    p:      position
+    """
+    h = (obj.h + y_max) / (2 * y_max)
+    ax.axvline(p, ymin = 0.5, ymax = h, c="green", ls="--", lw=1)
+
+    if h > 0.5:
+        ax.scatter(p, obj.h, color = "green", marker = 6)
+    else:
+        ax.scatter(p, obj.h, color = "green", marker = 7)
+
+def draw_paraxial_ray(ax, ray):
+    """
+    Draws a paraxial ray
+
+    ax:     plot
+    ray:    paraxial ray
+    """
+    global y_max
+    x = []
+    y = []
+
+    for pt in ray.pts:
+        x.append(pt[0])
+        y.append(pt[1])
+
+        if pt[1] > abs(y_max):
+            y_max = abs(pt[1])
+
+    ax.plot(x, y, lw=1)
+
+def draw_paraxial_rays(ax, rays):
+    """
+    Draws paraxial rays
+
+    ax:     plot
+    rays:   paraxial rays
+    """
+    for ray in rays:
+        draw_paraxial_ray(ax, ray)
+
 def draw_paraxial_system(ax, sys):
     """
     Draws a paraxial system
@@ -14,30 +62,22 @@ def draw_paraxial_system(ax, sys):
     ax:     plot
     sys:    system
     """
-
-    positions = [row[0] for row in sys.elements]
-    elements = [row[1] for row in sys.elements]
-    
+    global y_max
 
     # plot optical axis
     ax.axhline(y=0,color="black",dashes=[5,1,5,1],linewidth=1)
 
-    # plot rays
-    y_max = 0
-    for ray in sys.rays:
-        x = []
-        y = []
-        for pt in ray.pts:
-            x.append(pt[0])
-            y.append(pt[1])
-            if pt[1] > abs(y_max):
-                y_max = abs(pt[1])
-        ax.plot(x, y, lw=1)
+    # break up elements into positions and elements
+    positions = [row[0] for row in sys.elements]
+    elements = [row[1] for row in sys.elements]
+
+    # draw rays
+    draw_paraxial_rays(ax, sys.rays)
     y_max = 1.2 * y_max
     plt.ylim(-y_max, y_max)
 
-    # plot starting point
-    ax.axvline(positions[0], c="green", ls="--", lw=1)
+    # draw object
+    draw_paraxial_object(ax, elements[0], positions[0])
 
     # plot lenses
     for i in range(len(sys.elements)):
@@ -77,6 +117,8 @@ def draw_paraxial_system(ax, sys):
 
     # plot ending point
     ax.axvline(p, c="red", ls="--", lw=1)
+
+################
 
 def draw_surface(ax, x, y):
     """

@@ -134,8 +134,8 @@ class System():
         # vertexs
         self.v = [None, None]
 
-        # system stop
-        self.stop = None
+        # system stop id and position
+        self.stop = [None, None]
     
     # Functions for adding elements/rays/planes to system
 
@@ -258,7 +258,8 @@ class System():
         """
         Finds the system stop
         """
-        stopID = 0
+        stopID = None
+        stopPos = None
         minRatio = None
         isFirst = True
 
@@ -274,21 +275,21 @@ class System():
             p = self.elements[i][0]
             element = self.elements[i][1]
             
-            if element.id == "thickness":
-                pass
-            else:
+            if element.id == "lens" or element.id == "stop":
                 pt = ray.pts[j]
                 ratio = (element.d / 2) / pt[1]
                 if isFirst:
-                    stopID = j
+                    stopID = i
+                    stopPos = p
                     minRatio = ratio
                     isFirst = False
                 else:
-                    stopID = j
+                    stopID = i
+                    stopPos = p
                     minRatio = ratio
-                j = j + 1
 
-        self.elements[stopID][1][0].isSystemStop = True 
+        self.elements[stopID][1].isSystemStop = True
+        self.stop = [stopID, stopPos]
 
     # Functions for making system calculations
 
@@ -496,9 +497,7 @@ if __name__ == "__main__":
     sys.add_ray(ray1)
 
     sys.add_planes()
-    """
     sys.find_system_stop()
-    """
 
     sys.draw(ax)
     plt.show()

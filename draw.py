@@ -6,6 +6,7 @@ Description:
 import numpy as np
 import matplotlib.pyplot as plt
 
+# NEEDS REVIEW
 def draw_paraxial_system(ax, sys):
     """
     Draws a paraxial system
@@ -13,6 +14,10 @@ def draw_paraxial_system(ax, sys):
     ax:     plot
     sys:    system
     """
+
+    positions = [row[0] for row in sys.elements]
+    elements = [row[1] for row in sys.elements]
+    
 
     # plot optical axis
     ax.axhline(y=0,color="black",dashes=[5,1,5,1],linewidth=1)
@@ -32,18 +37,25 @@ def draw_paraxial_system(ax, sys):
     plt.ylim(-y_max, y_max)
 
     # plot starting point
-    p = 0
-    ax.axvline(p, c="green", ls="--", lw=1)
+    ax.axvline(positions[0], c="green", ls="--", lw=1)
 
     # plot lenses
-    for i in sys.elements:
-        if i.id == "thickness":
-            p = p + i.t / i.n
-        else:
-            r = ((i.d / 2) + y_max) / (2 * y_max)
+    for i in range(len(sys.elements)):
+        element = elements[i]
+        p = positions[i]
+
+        if element.id == "thickness":
+            pass
+        elif element.id == "lens":
+            r = ((element.d / 2) + y_max) / (2 * y_max)
             ax.axvline(p, color = "blue", ymin = 1 - r, ymax = r, ls = ":" , lw = 1)
-            ax.scatter(p, -i.d / 2, color = "blue", marker = 6)
-            ax.scatter(p, i.d / 2, color = "blue", marker = 7)
+
+            if element.isSystemStop:
+                ax.scatter(p, -element.d / 2, color = "black", marker = "x")
+                ax.scatter(p, element.d / 2, color = "black", marker = "x")
+            else:
+                ax.scatter(p, -element.d / 2, color = "blue", marker = 6)
+                ax.scatter(p, element.d / 2, color = "blue", marker = 7)
     
     # plot vertex planes
     ax.scatter(sys.v[0], 0, color = "black", marker = ".")
@@ -65,8 +77,6 @@ def draw_paraxial_system(ax, sys):
 
     # plot ending point
     ax.axvline(p, c="red", ls="--", lw=1)
-
-    
 
 def draw_surface(ax, x, y):
     """

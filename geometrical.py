@@ -29,7 +29,7 @@ class Lens():
         self.d = d
         
         # conditionals
-        self.isStop = False
+        self.isSystemStop = False
 
         # power of lens
         self.phi = 1 / self.f
@@ -54,6 +54,59 @@ class Thickness():
         self.n = n
 
 
+class Stop():
+    """
+    Holds a stop
+    """
+
+    id = "stop"
+
+    def __init__(self, d):
+        """
+        Defines a stop
+
+        d:  diameter
+        """
+
+        self.d = d
+
+        self.isSystemStop = False
+
+
+class Object():
+    """
+    Holds an object
+    """
+
+    id = "object"
+
+    def __init__(self, h = None):
+        """
+        Defines an object
+
+        h:  axial height of object
+        """
+
+        self.h = h
+
+
+class Image():
+    """
+    Holds an image
+    """
+
+    id = "image"
+
+    def __init__(self, h = None):
+        """
+        Defines an image
+
+        h: axial height of image
+        """
+
+        self.h = h
+
+
 class System():
     """
     Holds a system
@@ -68,9 +121,11 @@ class System():
         """
 
         self.type = "focal"
-
         self.elements = []
         self.rays = []
+
+        # current reduced thickness
+        self.p = 0
 
         # principal planes
         self.pp = [None, None]
@@ -78,6 +133,9 @@ class System():
         self.fp = [None, None]
         # vertexs
         self.v = [None, None]
+
+        # system stop
+        self.stop = None
     
     # Functions for adding elements/rays/planes to system
 
@@ -88,7 +146,14 @@ class System():
         element:    element to be added
         """
 
-        self.elements.append(element)
+        p = self.p
+
+        if element.id == "thickness":
+            self.p = self.p + element.t / element.n
+        else:
+            pass
+
+        self.elements.append([p, element])
     
     def add_elements(self,elements):
         """
@@ -97,8 +162,8 @@ class System():
         elements:   list of elements to be added
         """
         
-        for  i in elements:
-            self.elements.append(i)
+        for i in elements:
+            self.add_element(i)
     
     def transfer(self, pos, element):
         """
@@ -136,9 +201,9 @@ class System():
 
         return pos
 
-    def add_ray(self, ray):
+    def trace_ray(self, ray):
         """
-        Traces a ray through the system
+        Traces ray through the system
 
         ray:    ray to be traced
         """
@@ -152,17 +217,15 @@ class System():
         pos = np.array([y, u])
       
         for i in range(len(self.elements)):
-            element = self.elements[i]
+            try:
+                p = self.elements[i + 1][0]
+            except:
+                pass
+            element = self.elements[i][1]
 
             if element.id == "thickness":
-                # reduced thickness
-                t = element.t / element.n
-                # updates position
-                p = p + t
-
                 # transfer
                 pos = self.transfer(pos, element)
-
                 # point array
                 pt = np.array([[p, pos[0], pos[1]]])
                 # append point to ray points
@@ -171,6 +234,15 @@ class System():
             elif element.id == "lens":
                 # refraction
                 pos = self.refraction(pos, element)
+
+    def add_ray(self, ray):
+        """
+        Adds a ray to the system
+
+        ray:    ray to be added
+        """
+        
+        self.trace_ray(ray)
         
         self.rays.append(ray)
 
@@ -182,6 +254,42 @@ class System():
         self.pp = [self.v[0] + self.find_front_principal_plane(), self.v[1] + self.find_rear_principal_plane()]
         self.fp = [self.v[0] + self.find_front_focal_distance(), self.v[1] + self.find_back_focal_distance()]
 
+    def find_system_stop(self):
+        """
+        Finds the system stop
+        """
+        stopID = 0
+        minRatio = None
+        isFirst = True
+
+        # ray starting at axial object postion with arbitrary angle
+        ray = Ray(0, 0.001)
+        self.trace_ray(ray)
+
+        # removes the intial and exiting thicknesses
+        elements = self.elements[1:-1]
+
+        j = 1
+        for i in range(len(elements)):
+            p = self.elements[i][0]
+            element = self.elements[i][1]
+            
+            if element.id == "thickness":
+                pass
+            else:
+                pt = ray.pts[j]
+                ratio = (element.d / 2) / pt[1]
+                if isFirst:
+                    stopID = j
+                    minRatio = ratio
+                    isFirst = False
+                else:
+                    stopID = j
+                    minRatio = ratio
+                j = j + 1
+
+        self.elements[stopID][1][0].isSystemStop = True 
+
     # Functions for making system calculations
 
     def find_vertex_points(self):
@@ -190,11 +298,11 @@ class System():
         """
         isFirst = True
 
-        p = 0
-        for element in self.elements:
-            if element.id == "thickness":
-                p = p + element.t / element.n
-            else:
+        for i in range(len(self.elements)):
+            p = self.elements[i][0]
+            element = self.elements[i][1]
+
+            if element.id == "lens":
                 if isFirst:
                     self.v[0] = p
                     isFirst = False
@@ -205,7 +313,8 @@ class System():
         Returns the vertex matrix
         """
         # removes the intial and exiting thicknesses
-        elements = self.elements[1:-1]
+        elements = self.elements[2:-2]
+        elements = [row[1] for row in elements]
         # intializes vertex matrix
         vertex_matrix = np.array([
             [1, 0],
@@ -340,16 +449,18 @@ class Ray():
 
     id = "ray"
 
-    def __init__(self, y, u):
+    def __init__(self, y, u, p = 0):
         """
         Defines a ray
 
-        y:  ray height
-        u:  paraxial ray angle
+        y:      ray height
+        u:      paraxial ray angle
+        p:      starting position of ray
         """
 
         self.y = y
         self.u = u
+        self.p = p
 
         """
         Array of points to store all points in a ray
@@ -361,7 +472,7 @@ class Ray():
                 [pn, yn, un]
             ]
         """
-        self.pts = np.array([[0, self.y, self.u]])
+        self.pts = np.array([[self.p, self.y, self.u]])
 
 
 if __name__ == "__main__":
@@ -371,18 +482,23 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
 
+    obj = Object(10)
     t0 = Thickness(50, 1)
     lens1 = Lens(100, 20)
     t1 = Thickness(50, 1)
     lens2 = Lens(75, 20)
     t2 = Thickness(100, 1)
+    img = Image()
     ray1 = Ray(10, 0)
 
     sys = System()
-    sys.add_elements([t0, lens1, t1, lens2, t2])
+    sys.add_elements([obj, t0, lens1, t1, lens2, t2, img])
     sys.add_ray(ray1)
 
     sys.add_planes()
+    """
+    sys.find_system_stop()
+    """
 
     sys.draw(ax)
     plt.show()

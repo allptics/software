@@ -1,45 +1,103 @@
 """
-This module deals with first order optics
+Decription:
+    This module is for modeling focal and afocal systems using geometrical optics
 """
 
 import numpy as np
-
 from draw import draw_paraxial_system
 
-### FUNCTIONS ###
-
-###  CLASSES  ###
-
-class Lens():
+### ELEMENTS ###
+class Element():
     """
-    Holds a thin spherical lens
-    """
+    Parent class for elements
+        
+        ID Reference
+            Unassigned: None
+            Object:     object
+            Image:      image
+            ThinLens:   thin-lens
+            Aperture:   aperture
+            Thickness:  thickness
+            Rays:       ray
 
-    id = "lens"
+            System:     system
+    """
+    physics_sys = "geometrical"
+    id = None
+
+class Object(Element):
+    """
+    Child class for objects
+    """
+    id = "object"
+
+    def __init__(self, h = None, offset = 0):
+        """
+        Defines an object
+
+        h:      axial height of object
+        offset: axial offset (default object starts on axis)
+        """
+        self.h = h
+
+class Image(Element):
+    """
+    Child class for images
+    """
+    id = "image"
+
+    def __init__(self, h = None, offset = 0):
+        """
+        Defines an image
+
+        h:      axial height of image
+        offset: axial offset (default image starts on axis)
+        """
+        self.h = h
+
+class ThinLens(Element):
+    """
+    Child class for thin lenses (spherical)
+    """
+    id = "thin-lens"
 
     def __init__(self, f, d):
         """
-        Defines a thin lens
+        Defines a thin lens (spherical)
 
         f:  focal length of lens
         d:  diameter of lens
-        """
-
+        """7
         self.f = f
         self.d = d
-        
-        # conditionals
-        self.isSystemStop = False
 
         # power of lens
         self.phi = 1 / self.f
+        
+        ## CONDITIONALS ##
+        self.isSystemStop = False
 
-
-class Thickness():
+class Aperture(Element):
     """
-    Holds a thickness
+    Child class for apertures
     """
+    id = "aperture"
 
+    def __init__(self, d):
+        """
+        Defines an aperture
+
+        d:  diameter of aperture
+        """
+        self.d = d
+
+        ## CONDITIONALS ##
+        self.isSystemStop = False
+
+class Thickness(Element):
+    """
+    Child class for thicknesses
+    """
     id = "thickness"
 
     def __init__(self, t, n):
@@ -49,71 +107,47 @@ class Thickness():
         t:  thickness
         n:  refractive index
         """
-
         self.t = t
         self.n = n
 
+        # reduced thickness
+        self.T = t / n
 
-class Stop():
+###   RAYS   ###
+class Ray(Element):
     """
-    Holds a stop
+    Class for a ray
     """
+    id = "ray"
 
-    id = "stop"
-
-    def __init__(self, d):
+    def __init__(self, y, u, p = 0):
         """
-        Defines a stop
+        Defines a ray
 
-        d:  diameter
+        y:      ray height
+        u:      paraxial ray angle
+        p:      starting position of ray
         """
+        self.y = y
+        self.u = u
+        self.p = p
 
-        self.d = d
-
-        self.isSystemStop = False
-
-
-class Object():
-    """
-    Holds an object
-    """
-
-    id = "object"
-
-    def __init__(self, h = None):
         """
-        Defines an object
-
-        h:  axial height of object
+        Array of ray points
+            [
+                [p0, y0, u0],
+                ...
+                [pn, yn, un]
+            ]
         """
+        self.pts = np.array([[self.p, self.y, self.u]])
 
-        self.h = h
-
-
-class Image():
+###  SYSTEM  ###
+class System(Element):
     """
-    Holds an image
+    Class for a system
     """
-
-    id = "image"
-
-    def __init__(self, h = None):
-        """
-        Defines an image
-
-        h: axial height of image
-        """
-
-        self.h = h
-
-
-class System():
-    """
-    Holds a system
-    """
-
     id = "system"
-    physics = "geometrical"
 
     def __init__(self, type="focal"):
         """
@@ -443,39 +477,6 @@ class System():
         draw_paraxial_system(ax, self)
 
 
-class Ray():
-    """
-    Holds a ray
-    """
-
-    id = "ray"
-
-    def __init__(self, y, u, p = 0):
-        """
-        Defines a ray
-
-        y:      ray height
-        u:      paraxial ray angle
-        p:      starting position of ray
-        """
-
-        self.y = y
-        self.u = u
-        self.p = p
-
-        """
-        Array of points to store all points in a ray
-
-        Format
-            [
-                [p0, y0, u0],
-                ...
-                [pn, yn, un]
-            ]
-        """
-        self.pts = np.array([[self.p, self.y, self.u]])
-
-
 if __name__ == "__main__":
     """
     Space for testing
@@ -485,9 +486,9 @@ if __name__ == "__main__":
 
     obj = Object(10)
     t0 = Thickness(50, 1)
-    lens1 = Lens(100, 20)
+    lens1 = ThinLens(100, 20)
     t1 = Thickness(50, 1)
-    lens2 = Lens(75, 20)
+    lens2 = ThinLens(75, 20)
     t2 = Thickness(100, 1)
     img = Image()
     ray1 = Ray(10, 0)

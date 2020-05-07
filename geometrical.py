@@ -6,46 +6,30 @@ Decription:
 import numpy as np
 from draw import draw_paraxial_system
 
-### ELEMENTS ###
-class Element():
+class Environment():
     """
-    Parent class for elements
-        
-        ID Reference
-            Unassigned: None
-            Object:     object
-            Image:      image
-            ThinLens:   thin-lens
-            Aperture:   aperture
-            Thickness:  thickness
-            Rays:       ray
-
-            System:     system
+    Parent class for elements, used to keep physics systems isolated
     """
     physics_sys = "geometrical"
-    id = None
 
-class Object(Element):
+class Object(Environment):
     """
     Child class for objects
     """
-    id = "object"
-
     def __init__(self, h = None, offset = 0):
         """
         Defines an object
 
         h:      axial height of object
-        offset: axial offset (default object starts on axis)
+        offset: axial offset (default: object starts on axis)
         """
         self.h = h
+        self.offset = offset
 
-class Image(Element):
+class Image(Environment):
     """
     Child class for images
     """
-    id = "image"
-
     def __init__(self, h = None, offset = 0):
         """
         Defines an image
@@ -54,22 +38,23 @@ class Image(Element):
         offset: axial offset (default image starts on axis)
         """
         self.h = h
+        self.offset = offset
 
-class ThinLens(Element):
+class ThinLens(Environment):
     """
     Child class for thin lenses (spherical)
     """
-    id = "thin-lens"
-
-    def __init__(self, f, d):
+    def __init__(self, f, d, offset = 0):
         """
         Defines a thin lens (spherical)
 
         f:  focal length of lens
         d:  diameter of lens
-        """7
+        offset: axial offset (default image starts on axis)
+        """
         self.f = f
         self.d = d
+        self.offset = offset
 
         # power of lens
         self.phi = 1 / self.f
@@ -77,29 +62,27 @@ class ThinLens(Element):
         ## CONDITIONALS ##
         self.isSystemStop = False
 
-class Aperture(Element):
+class Aperture(Environment):
     """
     Child class for apertures
     """
-    id = "aperture"
-
     def __init__(self, d):
         """
         Defines an aperture
 
         d:  diameter of aperture
+        offset: axial offset (default image starts on axis)
         """
         self.d = d
+        self.offset = offset
 
         ## CONDITIONALS ##
         self.isSystemStop = False
 
-class Thickness(Element):
+class Thickness(Environment):
     """
     Child class for thicknesses
     """
-    id = "thickness"
-
     def __init__(self, t, n):
         """
         Defines a thickness
@@ -113,65 +96,68 @@ class Thickness(Element):
         # reduced thickness
         self.T = t / n
 
-###   RAYS   ###
-class Ray(Element):
+class Ray(Environment):
     """
     Class for a ray
     """
-    id = "ray"
-
     def __init__(self, y, u, p = 0):
         """
         Defines a ray
 
-        y:      ray height
-        u:      paraxial ray angle
-        p:      starting position of ray
-        """
-        self.y = y
-        self.u = u
-        self.p = p
+        y:  initial ray height
+        u:  initial paraxial ray angle
+        p:  initial position of ray on optical axis
 
-        """
-        Array of ray points
+        Ray points
             [
                 [p0, y0, u0],
                 ...
                 [pn, yn, un]
             ]
         """
-        self.pts = np.array([[self.p, self.y, self.u]])
+        self.pts = np.array([
+            [p, y, u]
+        ])
 
-###  SYSTEM  ###
-class System(Element):
+class System(Environment):
     """
     Class for a system
     """
-    id = "system"
-
-    def __init__(self, type="focal"):
+    def __init__(self, sys_type = "focal"):
         """
         Defines a system
         """
-
-        self.type = "focal"
-        self.elements = []
-        self.rays = []
-
-        # current reduced thickness
-        self.p = 0
-
-        # principal planes
-        self.pp = [None, None]
-        # focal planes
-        self.fp = [None, None]
-        # vertexs
-        self.v = [None, None]
-
-        # system stop id and position
-        self.stop = [None, None]
+        self.sys_type = sys_type
+        
+        self.list = {
+            "obj": None,
+            "img": None,
+            "elements": [],
+            "rx": [],
+            "pp": [None, None],
+            "ff": [None, None],
+            "vv": [None, None],
+            "rays": []
+        }
     
     # Functions for adding elements/rays/planes to system
+
+    def update_perscription(self):
+        """
+        Updates the system perscription
+        """
+        # clears previous perscription
+        self.list["rx"].clear()
+        # intial reduced postion
+        p = 0
+
+        for element in self.list["elements"]:
+            id = type(element).__name__
+
+            self.list["rx"].append({"p": p, "id": id})
+
+            if id == "Thickness":
+                p = p + element.T
 
     def add_element(self,element):
         """
@@ -179,50 +165,50 @@ class System(Element):
 
         element:    element to be added
         """
+        id = type(element).__name__
 
-        p = self.p
-
-        if element.id == "thickness":
-            self.p = self.p + element.t / element.n
+        if id == "Object":
+            self.list["obj"].append(element)
+            self.list["img"] = None
+        elif id == "Image":
+            self.list["obj"] = None
+            self.list["img"].append(element)
         else:
-            pass
-
-        self.elements.append([p, element])
-    
+            self.list["elements"].append(element)
+        
+        self.update_perscription()
+        
     def add_elements(self,elements):
         """
         Adds list of elements to the system
 
         elements:   list of elements to be added
         """
-        
         for i in elements:
             self.add_element(i)
     
-    def transfer(self, pos, element):
+    def transfer(self, inital, element):
         """
         Performs a transfer
 
-        pos:        intial ray array
+        initial:        intial ray array
         element:    either a thickness or thin lens 
         """
-        # reduced thickness
-        t = element.t / element.n
         # transfer array
         transfer = np.array([
-            [1, t],
+            [1, element.T],
             [0, 1]
         ])
         # ouput ray
-        pos = np.matmul(transfer, pos)
+        output = np.matmul(transfer, inital)
 
-        return pos
+        return output
 
-    def refraction(self, pos, element):
+    def refraction(self, initial, element):
         """
         Performs a refraction
 
-        pos:        intial ray array
+        initial:        intial ray array
         element:    either a thickness or thin lens
         """
         # refraction
@@ -231,43 +217,41 @@ class System(Element):
             [-element.phi, 1]
         ])
         # output ray
-        pos = np.matmul(refraction, pos)
+        output = np.matmul(refraction, initial)
 
-        return pos
+        return output
 
-    def trace_ray(self, ray):
+    def trace_ray(self, ray, dir = 1):
         """
         Traces ray through the system
 
         ray:    ray to be traced
+        dir:    direction to trace (1 forward, -1 backwards)
         """
-        # postion of elements
-        p = 0
-        # initial ray height
-        y = ray.pts[0][1]
-        # initial ray angle
-        u = ray.pts[0][2]
-        # initial ray array
-        pos = np.array([y, u])
+        # intial ray array
+        initial = np.array([ray.pts[0][1], ray.pts[0][2]])
+        # starting position of array
+        p = ray.pts[0][0]
       
-        for i in range(len(self.elements)):
-            try:
-                p = self.elements[i + 1][0]
-            except:
-                pass
-            element = self.elements[i][1]
+        for element in self.list["elements"]:
 
-            if element.id == "thickness":
+            id = type(element).__name__
+
+            if id == "Thickness":
                 # transfer
-                pos = self.transfer(pos, element)
+                output = self.transfer(initial, element)
+                # increment thickness
+                p = p + element.T
                 # point array
-                pt = np.array([[p, pos[0], pos[1]]])
+                pt = np.array([[p, output[0], output[1]]])
                 # append point to ray points
                 ray.pts = np.append(ray.pts, pt, axis=0)
             
-            elif element.id == "lens":
+            elif id == "ThinLens":
                 # refraction
-                pos = self.refraction(pos, element)
+                output = self.refraction(initial, element) 
+
+            initial = output       
 
     def add_ray(self, ray):
         """
@@ -275,81 +259,46 @@ class System(Element):
 
         ray:    ray to be added
         """
-        
         self.trace_ray(ray)
+        self.list["rays"].append(ray)
+
+    def find_planes(self):
+        """
+        Finds the planes to the system
+        """
+        # finds the vertices
+        self.list["vv"][0] = self.list["rx"][1]
+        self.list["vv"][1] = self.list["rx"][-2]
+
+        # finds the principal planes
+        self.list["pp"][0] = self.list["vv"][0] + self.find_front_principal_plane()
+        self.list["pp"][1] = self.list["vv"][1] + self.find_rear_principal_plane()
         
-        self.rays.append(ray)
-
-    def add_planes(self):
-        """
-        Adds planes to the system
-        """
-        self.find_vertex_points()
-        self.pp = [self.v[0] + self.find_front_principal_plane(), self.v[1] + self.find_rear_principal_plane()]
-        self.fp = [self.v[0] + self.find_front_focal_distance(), self.v[1] + self.find_back_focal_distance()]
-
-    def find_system_stop(self):
-        """
-        Finds the system stop
-        """
-        stopID = None
-        stopPos = None
-        minRatio = None
-        isFirst = True
-
-        # ray starting at axial object postion with arbitrary angle
-        ray = Ray(0, 0.001)
-        self.trace_ray(ray)
-
-        # removes the intial and exiting thicknesses
-        elements = self.elements[1:-1]
-
-        j = 1
-        for i in range(len(elements)):
-            p = self.elements[i][0]
-            element = self.elements[i][1]
-            
-            if element.id == "lens" or element.id == "stop":
-                pt = ray.pts[j]
-                ratio = (element.d / 2) / pt[1]
-                if isFirst:
-                    stopID = i
-                    stopPos = p
-                    minRatio = ratio
-                    isFirst = False
-                else:
-                    stopID = i
-                    stopPos = p
-                    minRatio = ratio
-
-        self.elements[stopID][1].isSystemStop = True
-        self.stop = [stopID, stopPos]
+        # finds the focal planes
+        self.list["ff"][0] = self.list["vv"][0] + self.find_front_focal_distance()
+        self.list["ff"][1] = self.list["vv"][1] + self.find_back_focal_distance()
 
     # Functions for making system calculations
 
-    def find_vertex_points(self):
-        """
-        Finds the vertex points
-        """
-        isFirst = True
-
-        for i in range(len(self.elements)):
-            p = self.elements[i][0]
-            element = self.elements[i][1]
-
-            if element.id == "lens":
-                if isFirst:
-                    self.v[0] = p
-                    isFirst = False
-                self.v[1] = p
-
     def find_vertex_matrix(self):
         """
-        Returns the vertex matrix
+        Updates the vertex matrix
         """
         # removes the intial and exiting thicknesses
-        elements = self.elements[2:-2]
-        elements = [row[1] for row in elements]
+        elements = self.list["elements"]
+
+        # remove bounding thicknesses
+        while type(elements[0]).__name__ == "Thickness":
+            del elements[0]
+        while type(elements[len(elements) - 1]).__name__ == "Thickness":
+            del elements[len(elements) - 1]
+
+        # reverse for multiplication
+        elements.reverse()
+
+        print(elements[0].f)
+        exit()
+
         # intializes vertex matrix
         vertex_matrix = np.array([
             [1, 0],
@@ -364,7 +313,7 @@ class System(Element):
         while i < max:
             element = elements[i]
             i = i + 1  
-            if element.id == "thickness":
+            if element.id == "Thickness":
                 # transfer array
                 transfer = np.array([
                     [1, element.t / element.n],
@@ -373,7 +322,7 @@ class System(Element):
                 # update vertex matrix 
                 vertex_matrix = np.matmul(transfer, vertex_matrix)
 
-            elif element.id == "lens":
+            elif element.id == "ThinLens":
                 refraction = np.array([
                     [1, 0],
                     [-element.phi, 1]
@@ -484,21 +433,17 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots()
 
-    obj = Object(10)
-    t0 = Thickness(50, 1)
-    lens1 = ThinLens(100, 20)
-    t1 = Thickness(50, 1)
-    lens2 = ThinLens(75, 20)
-    t2 = Thickness(100, 1)
-    img = Image()
-    ray1 = Ray(10, 0)
+    t0 = Thickness(100, 1)
+    lens0 = ThinLens(100, 10)
+    t1 = Thickness(100, 1)
+    lens1 = ThinLens(-100, 10)
+    t2 = Thickness(100, 10)
+
+    ray0 = Ray(10, 0)
+    ray1 = Ray(5, 0)
+    ray2 = Ray(2.5, 0)
 
     sys = System()
-    sys.add_elements([obj, t0, lens1, t1, lens2, t2, img])
-    sys.add_ray(ray1)
-
-    sys.add_planes()
-    sys.find_system_stop()
-
-    sys.draw(ax)
-    plt.show()
+    sys.add_elements([t0, lens0, t1, lens1, t2])
+    sys.add_ray(ray0)
+    sys.find_vertex_matrix()    
